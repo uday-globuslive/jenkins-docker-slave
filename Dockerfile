@@ -41,7 +41,7 @@ RUN apt-get update && \
 RUN JAVA_HOME_DIR="/usr/lib/jvm/java-${JDK_VERSION}-openjdk-amd64" && \
     echo "JAVA_HOME=$JAVA_HOME_DIR" >> /etc/environment && \
     echo "export JAVA_HOME=$JAVA_HOME_DIR" >> /etc/bash.bashrc
-ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/java-${JDK_VERSION}-openjdk-amd64
 
 # Install Node.js and npm
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
@@ -67,7 +67,8 @@ RUN apt-get -qy autoremove && \
     adduser --quiet jenkins && \
     echo "jenkins:jenkins" | chpasswd && \
     mkdir -p /home/jenkins/.m2 && \
-    mkdir -p /home/jenkins/.ssh
+    mkdir -p /home/jenkins/.ssh && \
+    mkdir -p /workspace
 
 #ADD settings.xml /home/jenkins/.m2/
 # Copy authorized keys
@@ -76,15 +77,9 @@ COPY .ssh/authorized_keys /home/jenkins/.ssh/authorized_keys
 # Set permissions and verify installations
 RUN chown -R jenkins:jenkins /home/jenkins/.m2/ && \
     chown -R jenkins:jenkins /home/jenkins/.ssh/ && \
+    chown -R jenkins:jenkins /workspace && \
     chmod 700 /home/jenkins/.ssh && \
     chmod 600 /home/jenkins/.ssh/authorized_keys
-
-# Verify all installations work
-RUN java -version && \
-    mvn -version && \
-    node -v && \
-    npm -v && \
-    yarn -v
 
 # Set working directory
 WORKDIR /workspace
