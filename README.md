@@ -1,13 +1,15 @@
 # jenkins-docker-agent
 
-Dokcer agent integration for Jenkins is explained in this article. https://devopscube.com/docker-containers-as-build-slaves-jenkins/
+Docker agent integration for Jenkins is explained in this article. https://devopscube.com/docker-containers-as-build-slaves-jenkins/
+
+customized slave image: https://hub.docker.com/r/uday1kiran/jenkins-slave
 
 Extra step for configuration in ExecStart line in /lib/systemd/system/docker.service
 
 ExecStart=/usr/bin/dockerd -H fd:// -H tcp://0.0.0.0:4243 --containerd=/run/containerd/containerd.sock
 
 
-Great to hear it's working now! Here's a concise summary of the issue and the fix:
+
 
 ---
 
