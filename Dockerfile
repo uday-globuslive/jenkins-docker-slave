@@ -1,3 +1,4 @@
+# Alternative Dockerfile with OpenJDK (more reliable for Ubuntu 24.04)
 FROM ubuntu:24.04
 LABEL maintainer="uday kiran reddy"
 
@@ -8,7 +9,7 @@ ARG MAVEN_VERSION=3.9.4
 
 # Environment variables
 ENV DEBIAN_FRONTEND=noninteractive
-ENV JAVA_HOME=/usr/lib/jvm/temurin-${JDK_VERSION}-jdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/java-${JDK_VERSION}-openjdk-amd64
 ENV MAVEN_HOME=/opt/maven
 ENV PATH=$PATH:$MAVEN_HOME/bin
 
@@ -31,16 +32,16 @@ RUN apt-get update && \
     sed -i 's|session    required     pam_loginuid.so|session    optional     pam_loginuid.so|g' /etc/pam.d/sshd && \
     mkdir -p /var/run/sshd && \
     rm -rf /var/lib/apt/lists/*
-# Install Java (Eclipse Temurin)
-RUN wget -O - https://packages.adoptium.net/artifactory/api/gpg/key/public | gpg --dearmor -o /usr/share/keyrings/adoptium.gpg && \
-    echo "deb [signed-by=/usr/share/keyrings/adoptium.gpg] https://packages.adoptium.net/artifactory/deb jammy main" > /etc/apt/sources.list.d/adoptium.list && \
-    apt-get update && \
-    apt-get install -y temurin-${JDK_VERSION}-jdk && \
+
+# Install Java (OpenJDK - more reliable for Ubuntu 24.04)
+RUN apt-get update && \
+    apt-get install -y openjdk-${JDK_VERSION}-jdk && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Node.js and npm
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
-    apt-get install -y nodejs
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Yarn
 RUN corepack enable && \
@@ -51,6 +52,7 @@ RUN curl -fsSL https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/bi
     tar -xzf /tmp/maven.tgz -C /opt && \
     ln -s /opt/apache-maven-${MAVEN_VERSION} /opt/maven && \
     rm /tmp/maven.tgz
+
 # Cleanup old packages and add user jenkins to the image
 RUN apt-get -qy autoremove && \
     adduser --quiet jenkins && \
