@@ -1,23 +1,6 @@
 name: Build and Push Docker Image
 
 on:
-  push:
-    branches:
-      - main
-      - master
-      - develop
-      - patch*
-    paths:
-      - 'Dockerfile'
-      - '.github/workflows/docker-build.yml'
-  pull_request:
-    branches:
-      - main
-      - master
-    paths:
-      - 'Dockerfile'
-  release:
-    types: [published]
   workflow_dispatch:
     inputs:
       tag:
