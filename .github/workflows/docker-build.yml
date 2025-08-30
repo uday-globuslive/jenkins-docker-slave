@@ -17,7 +17,7 @@ on:
         default: '18'
         type: string
       MAVEN_VERSION:
-        description: 'Docker image tag'
+        description: 'Maven Version'
         required: false
         default: '3.9.4'
         type: string
