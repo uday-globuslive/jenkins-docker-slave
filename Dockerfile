@@ -1,4 +1,4 @@
-# Alternative Dockerfile with OpenJDK (more reliable for Ubuntu 24.04)
+# More robust Dockerfile with proper variable handling
 FROM ubuntu:24.04
 LABEL maintainer="uday kiran reddy"
 
@@ -9,9 +9,6 @@ ARG MAVEN_VERSION=3.9.4
 
 # Environment variables
 ENV DEBIAN_FRONTEND=noninteractive
-ENV JAVA_HOME=/usr/lib/jvm/java-${JDK_VERSION}-openjdk-amd64
-ENV MAVEN_HOME=/opt/maven
-ENV PATH=$PATH:$MAVEN_HOME/bin
 
 # Make sure the package repository is up to date and install basic tools
 RUN apt-get update && \
@@ -33,10 +30,18 @@ RUN apt-get update && \
     mkdir -p /var/run/sshd && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Java (OpenJDK - more reliable for Ubuntu 24.04)
+# Install Java (OpenJDK) with proper variable expansion
 RUN apt-get update && \
-    apt-get install -y openjdk-${JDK_VERSION}-jdk && \
+    JDK_PACKAGE="openjdk-${JDK_VERSION}-jdk" && \
+    echo "Installing Java package: $JDK_PACKAGE" && \
+    apt-get install -y $JDK_PACKAGE && \
     rm -rf /var/lib/apt/lists/*
+
+# Set JAVA_HOME after Java installation
+RUN JAVA_HOME_DIR="/usr/lib/jvm/java-${JDK_VERSION}-openjdk-amd64" && \
+    echo "JAVA_HOME=$JAVA_HOME_DIR" >> /etc/environment && \
+    echo "export JAVA_HOME=$JAVA_HOME_DIR" >> /etc/bash.bashrc
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 
 # Install Node.js and npm
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
@@ -52,6 +57,10 @@ RUN curl -fsSL https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/bi
     tar -xzf /tmp/maven.tgz -C /opt && \
     ln -s /opt/apache-maven-${MAVEN_VERSION} /opt/maven && \
     rm /tmp/maven.tgz
+
+# Set Maven environment variables
+ENV MAVEN_HOME=/opt/maven
+ENV PATH=$PATH:$MAVEN_HOME/bin
 
 # Cleanup old packages and add user jenkins to the image
 RUN apt-get -qy autoremove && \
