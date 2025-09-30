@@ -1,93 +1,64 @@
-# More robust Dockerfile with proper variable handling
 FROM ubuntu:24.04
 LABEL maintainer="uday kiran reddy"
 
-# Build arguments
+# Build arguments (can override at build time)
 ARG JDK_VERSION=17
 ARG NODE_VERSION=18
 ARG MAVEN_VERSION=3.9.4
 
 # Environment variables
 ENV DEBIAN_FRONTEND=noninteractive
+ENV JAVA_HOME=/usr/lib/jvm/java-${JDK_VERSION}-openjdk-amd64
+ENV MAVEN_HOME=/opt/maven
+ENV PATH="${PATH}:${MAVEN_HOME}/bin"
 
-# Make sure the package repository is up to date and install basic tools
+# Install minimal dependencies
 RUN apt-get update && \
-    apt-get -qy full-upgrade && \
-    apt-get install -qy \
+    apt-get install -y --no-install-recommends \
         git \
         openssh-server \
         curl \
         wget \
         unzip \
         ca-certificates \
-        build-essential \
-        python3 \
-        python3-pip \
-        gnupg \
-        software-properties-common \
-        apt-transport-https && \
-    sed -i 's|session    required     pam_loginuid.so|session    optional     pam_loginuid.so|g' /etc/pam.d/sshd && \
-    mkdir -p /var/run/sshd && \
+        gnupg && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Java (OpenJDK) with proper variable expansion
+# Install Java dynamically
 RUN apt-get update && \
-    JDK_PACKAGE="openjdk-${JDK_VERSION}-jdk" && \
-    echo "Installing Java package: $JDK_PACKAGE" && \
-    apt-get install -y $JDK_PACKAGE && \
+    apt-get install -y --no-install-recommends openjdk-${JDK_VERSION}-jdk && \
+    echo "JAVA_HOME=${JAVA_HOME}" >> /etc/environment && \
     rm -rf /var/lib/apt/lists/*
 
-# Set JAVA_HOME after Java installation
-RUN JAVA_HOME_DIR="/usr/lib/jvm/java-${JDK_VERSION}-openjdk-amd64" && \
-    echo "JAVA_HOME=$JAVA_HOME_DIR" >> /etc/environment && \
-    echo "export JAVA_HOME=$JAVA_HOME_DIR" >> /etc/bash.bashrc
-ENV JAVA_HOME=/usr/lib/jvm/java-${JDK_VERSION}-openjdk-amd64
-
-# Install Node.js and npm
+# Install Node.js dynamically
 RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - && \
-    apt-get install -y nodejs && \
+    apt-get install -y --no-install-recommends nodejs && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Yarn
-RUN corepack enable && \
-    corepack prepare yarn@stable --activate
+# Enable Yarn via Corepack
+RUN corepack enable && corepack prepare yarn@stable --activate
 
-# Install Maven (newer version)
-RUN curl -fsSL https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz -o /tmp/maven.tgz && \
-    tar -xzf /tmp/maven.tgz -C /opt && \
+# Install Maven dynamically
+RUN curl -fsSL https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz \
+    | tar -xz -C /opt && \
     ln -s /opt/apache-maven-${MAVEN_VERSION} /opt/maven && \
-    rm /tmp/maven.tgz
+    echo 'export PATH=$PATH:/opt/maven/bin' > /etc/profile.d/maven.sh
 
-# Set Maven environment variables
-ENV MAVEN_HOME=/opt/maven
-ENV PATH=$PATH:$MAVEN_HOME/bin
-
-# Ensure PATH is set system-wide for all users
-RUN echo 'export PATH=$PATH:/opt/maven/bin' > /etc/profile.d/maven.sh
-
-# Cleanup old packages and add user jenkins to the image
-RUN apt-get -qy autoremove && \
-    adduser --quiet jenkins && \
+# Create Jenkins user
+RUN adduser --quiet jenkins && \
     echo "jenkins:jenkins" | chpasswd && \
-    mkdir -p /home/jenkins/.m2 && \
-    mkdir -p /home/jenkins/.ssh && \
-    mkdir -p /workspace
+    mkdir -p /home/jenkins/.m2 /home/jenkins/.ssh /workspace && \
+    chown -R jenkins:jenkins /home/jenkins /workspace
 
-#ADD settings.xml /home/jenkins/.m2/
 # Copy authorized keys
 COPY .ssh/authorized_keys /home/jenkins/.ssh/authorized_keys
+RUN chmod 700 /home/jenkins/.ssh && chmod 600 /home/jenkins/.ssh/authorized_keys
 
-# Set permissions and verify installations
-RUN chown -R jenkins:jenkins /home/jenkins/.m2/ && \
-    chown -R jenkins:jenkins /home/jenkins/.ssh/ && \
-    chown -R jenkins:jenkins /workspace && \
-    chmod 700 /home/jenkins/.ssh && \
-    chmod 600 /home/jenkins/.ssh/authorized_keys
+# SSH setup
+RUN mkdir -p /var/run/sshd && \
+    sed -i 's|session    required     pam_loginuid.so|session    optional     pam_loginuid.so|g' /etc/pam.d/sshd
 
-# Set working directory
 WORKDIR /workspace
-
-# Standard SSH port
 EXPOSE 22
 
 CMD ["/usr/sbin/sshd", "-D"]
