@@ -35,8 +35,8 @@ RUN curl -fsSL https://unofficial-builds.nodejs.org/download/release/v${NODE_VER
     | tar -xz -C /usr/local --strip-components=1 \
  && node -v && npm -v
 
-# Enable Yarn via Corepack
-RUN corepack enable && corepack prepare yarn@stable --activate
+# Enable Yarn via npm globally
+RUN npm install -g yarn
 
 # Install Maven dynamically
 RUN curl -fsSL https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz \
@@ -60,4 +60,5 @@ EXPOSE 22
 
 WORKDIR /workspace
 CMD ["/usr/sbin/sshd", "-D"]
+
 
