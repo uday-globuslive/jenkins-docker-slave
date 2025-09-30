@@ -21,7 +21,11 @@ RUN apk add --no-cache \
       bash \
       ca-certificates \
       shadow \
-      libc6-compat
+      libc6-compat \
+      libstdc++ \
+      gcc \
+      g++ \
+      make
 
 # Install Java dynamically
 RUN apk add --no-cache openjdk${JDK_VERSION}
@@ -56,3 +60,4 @@ EXPOSE 22
 
 WORKDIR /workspace
 CMD ["/usr/sbin/sshd", "-D"]
+
