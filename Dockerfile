@@ -62,6 +62,9 @@ RUN curl -fsSL https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/bi
 ENV MAVEN_HOME=/opt/maven
 ENV PATH=$PATH:$MAVEN_HOME/bin
 
+# Ensure PATH is set system-wide for all users
+RUN echo 'export PATH=$PATH:/opt/maven/bin' > /etc/profile.d/maven.sh
+
 # Cleanup old packages and add user jenkins to the image
 RUN apt-get -qy autoremove && \
     adduser --quiet jenkins && \
