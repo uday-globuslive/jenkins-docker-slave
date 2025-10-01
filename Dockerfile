@@ -44,11 +44,19 @@ RUN curl -fsSL https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/bi
     ln -s /opt/apache-maven-${MAVEN_VERSION} /opt/maven && \
     echo 'export PATH=$PATH:/opt/maven/bin' > /etc/profile.d/maven.sh
 
+# Ensure PATH is available in SSH sessions
+RUN echo "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/maven/bin" >> /etc/environment
+
 # Create Jenkins user
 RUN adduser --quiet jenkins && \
     echo "jenkins:jenkins" | chpasswd && \
     mkdir -p /home/jenkins/.m2 /home/jenkins/.ssh /workspace && \
-    chown -R jenkins:jenkins /home/jenkins /workspace
+    chown -R jenkins:jenkins /home/jenkins /workspace && \
+    echo 'export PATH=$PATH:/opt/maven/bin' >> /home/jenkins/.bashrc && \
+    echo 'export PATH=$PATH:/opt/maven/bin' >> /home/jenkins/.profile
+
+# Ensure Maven is readable by all users
+RUN chmod -R a+rX /opt/maven
 
 # Copy authorized keys
 COPY .ssh/authorized_keys /home/jenkins/.ssh/authorized_keys
