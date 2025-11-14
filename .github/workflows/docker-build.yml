@@ -1,4 +1,4 @@
-name: Build and Push Docker Alpine Image
+name: Build and Push Docker Image
 
 on:
   workflow_dispatch:
@@ -24,7 +24,7 @@ on:
 
 env:
   REGISTRY: docker.io
-  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/jenkins-slave-alpine
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/jenkins-slave
 
 jobs:
   build-and-push:
@@ -51,7 +51,6 @@ jobs:
       - name: Set effective image tag
         id: tag
         run: |
-          # Use provided tag or default to 'latest' if empty
           TAG_INPUT='${{ github.event.inputs.tag }}'
           if [ -z "$TAG_INPUT" ]; then
             TAG_INPUT='latest'
@@ -75,8 +74,6 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          # Let metadata-action still generate useful tags from ref,
-          # but we will *always* add the manual tag from inputs as a raw tag.
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -84,7 +81,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
             type=raw,value=latest,enable={{is_default_branch}}
-            # Manual tag from workflow_dispatch input
+            # Always add manual tag from workflow_dispatch input
             type=raw,value=${{ steps.tag.outputs.TAG }}
 
       - name: Debug resolved Docker tags
@@ -95,7 +92,6 @@ jobs:
       - name: Create SSH directory for build context
         run: |
           mkdir -p .ssh
-          # Create a dummy authorized_keys file if it doesn't exist
           if [ ! -f .ssh/authorized_keys ]; then
             echo "# Add your public SSH keys here" > .ssh/authorized_keys
           fi
@@ -104,7 +100,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile_alpine
+          file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -153,6 +149,8 @@ jobs:
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.TAG || 'latest' }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v2
